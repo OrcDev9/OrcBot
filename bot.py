@@ -33,7 +33,7 @@ InventoryContract = w3.eth.contract(abi=inventoryABI, address=inventoryAddress)
 
 @tasks.loop(minutes=10)
 async def send():
-  await send_embed_supply()
+  await send_embed_zug()
   
 @send.before_loop
 async def before():
@@ -58,12 +58,7 @@ async def on_message(message):
 
   if msg.startswith('!zug'):
       print('zug')
-      # channel = client.get_channel(channel_id)
       await send_embed_zug()
-
-  # if msg.startswith('!supplycrypt'):
-  #   print('!supplycrypt')
-  #   await send_embed_supply()
 
   # ORC INFO
       
@@ -84,8 +79,6 @@ async def on_message(message):
   # LOOT POOLS
   
   if msg.startswith('!lootpool'):
-    # split = msg.split(" ")
-    # split[1] = int(split[1])-1
     pool_id = int(msg.split()[1])-1
     if pool_id <= 5:
       await lootPool(pool_id)
@@ -128,27 +121,6 @@ def start():
 
 
 # Send To Discord - Bot Methods
-async def send_embed_supply():
-  embed = discord.Embed(
-    colour = discord.Colour.blue()
-  )
-  embed.add_field(name="Maces of Vengeance", value=" 🔴 567", inline=True)
-  embed.add_field(name="Ironfoe’s", value="🟠 1234", inline=True)
-  embed.add_field(name="Great Axes",     value="🟡 62", inline=True)
-  embed.add_field(name="Thundering Hammers", value="🟠 782", inline=True)
-  embed.add_field(name="Iron Shields", value="🟡 927", inline=True)
-  embed.add_field(name="Chainmail Coif", value="🟠 892", inline=True)
-  embed.add_field(name="Demons Spawn", value="🟡 123", inline=True)
-  embed.add_field(name="Wooden Shields", value="🔴 738", inline=True)
-  embed.add_field(name="Iron Longs Swords", value="🟡 245", inline=True)
-  embed.add_field(name="Pickaxes", value="🟠 456", inline=True)
-  embed.add_field(name="Clubs", value="🟠 500", inline=True)
-  embed.add_field(name="Legendary Broad Swords", value="🔴 349", inline=True)
-  embed.add_field(name="Diamond Tipped Mace", value="🔴 224", inline=True)
-  channel = client.get_channel(channel_id)
-  await channel.send(embed=embed)
-
-
 async def send_embed_zug():
   embed = discord.Embed(
     colour = discord.Colour.blue()
@@ -213,99 +185,43 @@ async def send_orc_img(orc_id):
 
   await channel.send(file=discord.File( "scaled.png"))
 
-## VERSION 1 -> uses Asyncio to send img & embed-data after both are fully generated
+## Using asyncio due to orc images not being stored server-side
 async def send_image_and_data(orc_id):
   await asyncio.gather(send_orc_img(orc_id), send_embed_orc_data(orc_id))
-
-## VERSION 2 -> single send with both file & embed-data
-
-# async def create_embed_orc_data(orc_id):
-#   embed = discord.Embed(
-#     colour = discord.Colour.blue()
-#   )
-  
-#   data = orc_data(orc_id)
-
-#   helm = getHelmName(data[1])
-#   mainhand = getMainhandName(data[2])
-#   offhand = getOffhandName(data[3])
-#   level = data[4]
-#   zugModifier = data[5]
-
-#   embed.add_field(name="Id", value="{}".format(orc_id), inline=True)
-#   embed.add_field(name="Level", value="{}".format(level), inline=True)
-#   embed.add_field(name="Zug Modifier", value="{}".format(zugModifier), inline=True)
-#   embed.add_field(name="Helm", value="{}".format(helm), inline=True)
-#   embed.add_field(name="Mainhand", value="{}".format(mainhand), inline=True)
-#   embed.add_field(name="Offhand", value="{}".format(offhand), inline=True)
-
-#   return embed
-
-# async def create_image_for_orc(orc_id):
-#   # body, helm, mainhand, offhand = SVG arg order
-#   orc = orc_data(orc_id)
-#   body = orc[0]
-#   helm = orc[1]
-#   mainhand = orc[2]
-#   offhand = orc[3]
-
-#   svg = InventoryContract.functions.getSVG(body, helm, mainhand, offhand).call()
-
-#   svg2png(bytestring=svg, write_to='orc.png')
-  
-#   m = img.imread("orc.png")
-#   w, h = m.shape[:2]
-#   xNew = int(w * 4)
-#   yNew = int(h * 4)
-#   xScale = xNew/(w-1)
-#   yScale = yNew/(h-1)
-#   newImage = npy.zeros([xNew, yNew, 4]);
-  
-#   for i in range(xNew-1):
-#     for j in range(yNew-1):
-#         newImage[i + 1, j + 1]= m[1 + int(i / xScale),
-#                                   1 + int(j / yScale)]
-  
-#   return img.imsave('scaled.png', newImage);
-
-# async def test2(orc_id):
-#   # embed = discord.Embed(title="Title", description="Desc", color=0x00ff00) #creates embed
-#   # file = discord.File("path/to/image/file.png", filename="image.png")
-#   # embed.set_image(url="attachment://image.png")
-#   # await ctx.send(file=file, embed=embed)
-#   embed = create_embed_orc_data(orc_id)
-#   file = create_image_for_orc(orc_id)
-#   embed.set_image(url="attachment://image.png")
-#   await ctx.send(file=file, embed=embed)
 
 defaultImageURL = "https://art.pixilart.com/b1d2bc6cd17acba.png"
 
 async def lootPool(poolNum):
 
   poolInfo = EtherOrcsContract.functions.lootPools(poolNum).call()
-  print(poolInfo)
+  enteredNum = poolNum + 1
 
+  poolNames = {
+    1: "Town",
+    2: "Dungeon",
+    3: "The Crypt",
+    4: "Castle",
+    5: "Dragons Lair",
+    6: "The Ether"
+  } 
   minLVL = int(poolInfo[0])
   totalItems = int(poolInfo[3])
   tier1 = int(poolInfo[4])
   tier2 = int(poolInfo[5])
   tier3 = int(poolInfo[6])
 
-  total_name = "Items Remaining"
-  minLVL_name = "Minimum Level"
-  tier1_name = "Tier %s Items"%(poolNum + 1)
-  tier2_name = "Tier %s Items"%(poolNum + 1)
-  tier3_name = "Tier %s Items"%(poolNum + 1)
-  # tier2_name = "Tier " + str(poolNum + 2) + " Items"
-  # tier3_name = "Tier " + str(poolNum + 3) + " Items"
+  pool_name = poolNames[enteredNum]
+  tier1_name = "Tier %s Items"%(enteredNum)
+  tier2_name = "Tier %s Items"%(enteredNum)
+  tier3_name = "Tier %s Items"%(enteredNum)
 
   embed = discord.Embed(
     colour = discord.Colour.blue()
   )
 
-  embed.add_field(name=minLVL_name, value=minLVL, inline=True)
-  embed.add_field(name=total_name, value=totalItems, inline=True)
-  embed.add_field()
+  embed.add_field(name="Area", value=pool_name, inline=True)
+  embed.add_field(name="Minimum Level", value=minLVL, inline=True)
+  embed.add_field(name="Items Remaining", value=totalItems, inline=True)
   embed.add_field(name=tier1_name, value=tier1, inline=True)
   embed.add_field(name=tier2_name, value=tier2, inline=True)
   embed.add_field(name=tier3_name, value=tier3, inline=True)
